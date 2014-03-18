@@ -5,6 +5,7 @@
 #include <stdlib.h>
 using namespace std;
 const int SIZE=100;
+int TotalUsed=0; //variable to keep track of total products available;
 //Create structure for data
 struct products{
 	int plu;
@@ -13,22 +14,24 @@ struct products{
 	double price;
 	double amount;
 } items [SIZE];
+
+
 bool readInventory(string filename){
   int local=0;
   string line;
-  ifstream myfile ("Products.txt");
-  if (myfile.is_open())
+  ifstream profile (filename.c_str());
+  if (profile.is_open())
   {
-    while ( getline (myfile,line) )
+    while ( getline (profile,line) )
     {
 	
     int length=line.length();
 	//seperate the PLU
 	int place=line.find(" ");
 	string plu=line.substr(0,place);
-	//cut string
+	//cut string, redefine line to the smaller string, cuts one past the space after plu
 	line=line.substr(place+1,length);
-	//get name
+	//get name, via finding the space after the name, and then cut
 	int name_place=line.find(" ");
 	string name=line.substr(0,name_place);
 	//cut string
@@ -56,15 +59,11 @@ bool readInventory(string filename){
 		items[local].price=atof(cost.c_str());
 		items[local].amount= atof(amount.c_str());
 	}
-	/*cout << "PLU: " << atoi(plu.c_str())<<endl;
-	cout <<"Name: " << name<<endl;
-	cout <<"type: " <<type<<endl;
-	cout << "cost: "<<atof(cost.c_str())<<endl;
-	cout << "Amount: "<<atof(amount.c_str())<<endl;*/
 	local+=1;
+	TotalUsed+=1;
 	//cout<<local<<endl;
     }
-    myfile.close();
+    profile.close();
   }
 	
 }
@@ -82,7 +81,7 @@ double checkout(){
 		int location;
 		bool found;
 		//search:
-		for(int x=0; x<SIZE;x++){
+		for(int x=0; x<TotalUsed;x++){
 			if(plu==items[x].plu){
 				location=x;
 				found=true;
@@ -93,17 +92,22 @@ double checkout(){
 		}
 		if(found){
 			type=items[location].type;
+			cout<<"Item: "<<items[location].name<<endl;
+			cout<<"Number Available: "<<items[location].amount<<endl;
+			cout<<"Enter 0 if wrong item"<<endl;
 			if(type==0){
 				cout<<"Enter Number of Units: ";
 			}else{
 				cout<<"Enter Number of Pounds: ";
 			}
 			cin>>amount;
-			if((items[location].amount-amount)>0){ //check to make sure not buying more then available;
-				sale+=items[location].price * amount;
-				items[location].amount-=amount;
-			}else{
-				cout<<"We do not have that many items"<<endl;;
+			if(amount!=0){
+				if((items[location].amount-amount)>=0){ //check to make sure not buying more then available;
+					sale+=items[location].price * amount;
+					items[location].amount-=amount;
+				}else{
+					cout<<"We do not have that many items"<<endl;;
+				}
 			}
 		}else{
 			cout<<"PLU Not Found.";
@@ -112,19 +116,40 @@ double checkout(){
 	}
 	return sale;
 }
-bool updateInventory(){
-	
+bool updateInventory(string filename){
+	 ofstream profile;
+     profile.open (filename.c_str());
+	for(int y=0;y<TotalUsed;y++){
+		profile <<items[y].plu<<" "<<items[y].name<<" "<<items[y].type<<" "<<items[y].price<<" "<<items[y].amount<<"\n";
+	}
+	profile.close();
+	return true;
 }
 int main(){
+	//constants/definitions
 	int total_sale_amount=0;
+	double discount_min=50.00; //amount for 5% discount
 	string file="Products.txt";
-readInventory(file);
-	double price=checkout();
-	cout<<price<<endl;
-/*for(int x=0; x<SIZE;x++){
-	cout<<x<<endl;
-	cout<< items[x].name<<endl;
-}*/
-//start by reading in file
-
+	
+	//Inport products
+	readInventory(file);
+	
+	int option=0; //options for menu; 1= checkout, 2 is close	
+	while(option!=2){
+		cout<<"1. Checkout Enter 1"<<endl;
+		cout<<"2.Close Store Enter 2"<<endl;
+		cout<<"Choice: ";
+		cin>>option;
+		if(option==1){		
+			double price=checkout();
+			if(price>discount_min){
+				price = price -(price*.05);
+				cout << "You earned a 5% discount!"<<endl;
+			}	
+			cout<<price<<endl;
+			option=0;
+		}else if(option==2){
+			updateInventory(file);
+		}
+	}
 }
